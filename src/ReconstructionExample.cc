@@ -5,7 +5,7 @@
 #include "podio/ROOTReader.h"
 
 #include "datamodel/CaloClusterCollection.h"
-#include "datamodel/PositionedCaloHitCollection.h"
+#include "datamodel/CaloHitCollection.h"
 
 #include "TVector3.h"
 
@@ -14,8 +14,8 @@
 #include <iostream>
 #include <cmath>
 
-ReconstructionExample::ReconstructionExample(const std::string& aCluserCollName, const std::string& aPosHitCollName, int aEventToAnalyse, double aEnergy, double aEtaMax, int aNoEta, int aNoPhi, double aDEta, double aDPhi):
-  m_clusterCollName(aCluserCollName), m_posHitCollName(aPosHitCollName), m_eventToAnalyse(aEventToAnalyse), m_energy(aEnergy), m_etaMax(aEtaMax), m_noEta(aNoEta), m_noPhi(aNoPhi), m_dEta(aDEta), m_dPhi(aDPhi) {
+ReconstructionExample::ReconstructionExample(const std::string& aCluserCollName, const std::string& aPosHitCollName, Decoder aDecoder, int aEventToAnalyse, double aEnergy, double aEtaMax, int aNoEta, int aNoPhi, double aDEta, double aDPhi):
+  m_clusterCollName(aCluserCollName), m_posHitCollName(aPosHitCollName), m_decoder(aDecoder), m_eventToAnalyse(aEventToAnalyse), m_energy(aEnergy), m_etaMax(aEtaMax), m_noEta(aNoEta), m_noPhi(aNoPhi), m_dEta(aDEta), m_dPhi(aDPhi) {
   Initialize_histos();
 }
 
@@ -37,7 +37,7 @@ void ReconstructionExample::processEvent(podio::EventStore& aStore, int aEventId
   }
   // Get the collections
   const fcc::CaloClusterCollection* clusters(nullptr);
-  const fcc::PositionedCaloHitCollection* cells(nullptr);
+  const fcc::CaloHitCollection* cells(nullptr);
 
   bool testClusters = aStore.get(m_clusterCollName, clusters);
   bool testCells = aStore.get(m_posHitCollName, cells);
@@ -79,15 +79,13 @@ void ReconstructionExample::processEvent(podio::EventStore& aStore, int aEventId
     }
     //Loop through the collection
     for (const auto icell = cells->begin(); icell != cells->end(); ++icell) {
+      m_decoder.setValue(icell->core().cellId);
+      float etaCell = Eta_offset + m_decoder.value("eta", icell->core().cellId) * m_dEta;
+      float phiCell = Phi_offset + m_decoder.value("phi", icell->core().cellId) * m_dPhi;
       if (aVerbose) {
-        std::cout << "Cell id: " << icell->core().cellId << " at " << icell->position().x
-                  << " , " <<  icell->position().y
-                  << " , " <<  icell->position().z
+        std::cout << "Cell id: " << icell->core().cellId << " at eta: " << etaCell << " and phi: " << phiCell
                   << "  with energy " <<  icell->core().energy << " GeV" << std::endl;
       }
-      TVector3 position(icell->position().x, icell->position().y, icell->position().z);
-      float  phiCell = position.Phi();
-      float  etaCell = position.Eta();
       hAllCellEnergy->Fill(etaCell, phiCell, icell->core().energy);
       if(std::find(cellIds.begin(), cellIds.end(), icell->core().cellId) != cellIds.end()) {
         hClusterCellEnergy->Fill(etaCell, phiCell, icell->core().energy);

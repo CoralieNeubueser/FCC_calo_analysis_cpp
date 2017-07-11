@@ -20,12 +20,12 @@ from math import pi, floor
 # set of default parameters
 eventToDraw = 0
 maxEta = 1.8
-nPhi = 629 # artificially increase by 1 (odd number) - to make plots look OK
-dEta = 0.01
+nPhi = 512 # artificially increase by 1 (odd number) - to make plots look OK
+dEta = 0.001
 nEta = int(2*maxEta/dEta + 1)
 dPhi = 2*pi/nPhi
-nameClusterCollection = "caloClusters"
-namePositionedHitsCollection = "caloCellsPositions"
+nameClusterCollection = "EcalClusters"
+nameCellCollection = "caloCells"
 zoomEta = 21
 zoomPhi = 21
 etaWindowSeed = 9
@@ -64,7 +64,7 @@ if calo_init.args.event:
 
 from ROOT import gSystem
 gSystem.Load("libCaloAnalysis")
-from ROOT import ReconstructionExample, TCanvas, TFile, gStyle, gPad, kGreen, kRed, kBlue, TColor
+from ROOT import Decoder, ReconstructionExample, TCanvas, TFile, gStyle, gPad, kGreen, kRed, kBlue, TColor
 from draw_functions import *
 
 # use this script for multiple files
@@ -73,10 +73,13 @@ gStyle.SetPalette(73) # kCMYK
 
 for ifile, filename in enumerate(calo_init.filenamesIn):
     energy = calo_init.energy(ifile)
+    dec = Decoder("system:4,cryo:1,module:11,type:3,subtype:3,layer:8,eta:15,phi:10")
+    
     print "Energy of the initial particle: " + str(energy)
     print "File with reconstruction results: " + filename
     analysis = ReconstructionExample(nameClusterCollection,
-                                        namePositionedHitsCollection,
+                                        nameCellCollection,
+                                        dec, # decoder for cell ids
                                         eventToDraw,
                                         energy,
                                         maxEta, # max eta
